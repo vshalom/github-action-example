@@ -6,12 +6,13 @@ on:
       - dev
 
 jobs:
-  hello:
+  test:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Print hello
-        run: echo "Hello GitHub Actions"
+      - run: echo "running tests"
 
-      - name: Print commit sha
-        run: echo $GITHUB_SHA
+  build:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - run: echo "building app"
