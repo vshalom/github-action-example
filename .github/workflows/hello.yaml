@@ -1,12 +1,35 @@
-name: hello-actions
+name: needs-advanced
 
 on:
   push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
 
 jobs:
-  hello:
+  test:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Print message
-        run: echo "Hello GitHub Actions"
+      - run: echo "running tests on ${{ github.ref_name }} - event ${{ github.event_name }}"
+
+  build:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - run: echo "building app"
+
+  pr-check:
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event_name == 'pull_request'
+    steps:
+      - run: echo "PR number ${{ github.event.pull_request.number }} - ${{ github.head_ref }} -> ${{ github.base_ref }}"
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - run: echo "deploying to production from main"
