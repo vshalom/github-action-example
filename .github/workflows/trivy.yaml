@@ -1,0 +1,21 @@
+name: trivy-scan
+
+on:
+  workflow_dispatch:
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Trivy
+        uses: aquasecurity/setup-trivy@v0.3.1
+
+      - name: Print Trivy version
+        run: trivy --version
+
+      - name: Scan repository filesystem
+        run: trivy fs --severity HIGH,CRITICAL --exit-code 1 .
