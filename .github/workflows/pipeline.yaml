@@ -25,7 +25,17 @@ jobs:
     runs-on: ubuntu-latest
     needs: scm-pull
     steps:
-      - run: echo "Stage - Trivy scan"
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Trivy
+        uses: aquasecurity/setup-trivy@v0.3.1
+
+      - name: Print Trivy version
+        run: trivy --version
+
+      - name: Scan repository filesystem
+        run: trivy fs --severity HIGH,CRITICAL --exit-code 1 .
 
   bandit-scan:
     runs-on: ubuntu-latest
