@@ -2,6 +2,11 @@ name: pipeline-skeleton
 
 on:
   workflow_dispatch:
+    inputs:
+      force_fail:
+        description: "Force the unit-test stage to fail (Slack failure demo)"
+        type: boolean
+        default: false
 
 env:
   IMAGE: ${{ vars.DOCKERHUB_USERNAME }}/github-action-example
@@ -90,7 +95,13 @@ jobs:
     runs-on: ubuntu-latest
     needs: [docker-build, trivy-scan, bandit-scan, sonarqube]
     steps:
-      - run: echo "Stage - Unit test"
+      - name: Unit test
+        run: |
+          echo "Stage - Unit test"
+          if [ "${{ inputs.force_fail }}" = "true" ]; then
+            echo "force_fail is set - failing on purpose"
+            exit 1
+          fi
 
   deploy:
     runs-on: ubuntu-latest
@@ -109,3 +120,29 @@ jobs:
     needs: test
     steps:
       - run: echo "Stage - Post install"
+
+  notify:
+    runs-on: ubuntu-latest
+    needs: [start, scm-pull, docker-build, trivy-scan, bandit-scan, sonarqube,
+            docker-push, unit-test, deploy, test, post-install]
+    if: always()
+    steps:
+      - name: Slack on success
+        if: ${{ !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') }}
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_CHANNEL: pipe-line-alert
+          SLACK_COLOR: good
+          SLACK_TITLE: "Pipeline SUCCEEDED"
+          SLACK_MESSAGE: "All stages passed on ${{ github.ref_name }} (run #${{ github.run_number }})"
+
+      - name: Slack on failure
+        if: ${{ contains(needs.*.result, 'failure') }}
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_CHANNEL: pipe-line-alert
+          SLACK_COLOR: danger
+          SLACK_TITLE: "Pipeline FAILED"
+          SLACK_MESSAGE: "A stage failed on ${{ github.ref_name }} (run #${{ github.run_number }})"
